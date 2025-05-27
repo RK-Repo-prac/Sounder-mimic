@@ -5,7 +5,7 @@
 #include<memory>
 
 int main(){
-std::unique_ptr<Manager> manager_= std::make_unique<Manager>(ROUTING);
+std::unique_ptr<Manager> manager_= std::make_unique<Manager>(ROUTING,4);
 if(!manager_->read_config()){
    manager_.reset(nullptr);
    return 1;

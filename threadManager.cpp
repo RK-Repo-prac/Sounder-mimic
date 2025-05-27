@@ -40,3 +40,5 @@ void ThreadManager::insert_task(std::function<std::string(int)> task){
     cv.notify_one();
 
 }
+
+ThreadManager::~ThreadManager(){}

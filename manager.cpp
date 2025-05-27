@@ -24,6 +24,7 @@ bool Manager::read_config(){
         if(!botlist_.size()==0){
             return 1;
         }
+        std::cout<<"Successfully Parsed The Routing String"<<std::endl;
   }
   else{
     std::cout<<"Invalid Routing String"<<std::endl;

@@ -17,3 +17,5 @@ sock_obj_->create_socket(port_,pos_);
    };
    return recv_msg_;
 }
+
+Relay::~Relay(){}

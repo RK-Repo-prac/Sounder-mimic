@@ -63,3 +63,5 @@ std::string communication::recv_msg(int pos){
 
   }
 }
+
+communication::~communication(){}
