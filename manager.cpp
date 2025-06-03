@@ -1,17 +1,27 @@
 #include "manager.h"
 
-Manager::Manager(std::string routing,int t_count):thread_count_(t_count){
+Manager::Manager(std::string routing){
  routing_=routing;
- relay=std::make_shared<Relay>();
- threadpool_=std::make_shared<ThreadManager>(thread_count_);
 }
 
 bool Manager::read_config(){
+  
+}
+Manager::~Manager(){
+    std::cout<<"Destructor Invoked"<<std::endl;
+}
+
+void Manager::start_threads(){
+  
+
+}
+
+void Manager::relayThread(){
   if(routing_.length() == 0){
       std::cout<<"Empty Routing String"<<std::endl;
-      return 0;
   }
   else{
+      std::vector<std::string> botlist;
       size_t position = routing_.find('=');
       if (position != std::string::npos) {
         std::string values = routing_.substr(position + 1);
@@ -19,24 +29,21 @@ bool Manager::read_config(){
         std::string token;
 
         while (std::getline(ss, token, ',')) {
-            botlist_.emplace_back(token);
+            botlist.emplace_back(token);
         }
-        if(!botlist_.size()==0){
-            return 1;
+        if(!botlist.size()==0){
         }
         std::cout<<"Successfully Parsed The Routing String"<<std::endl;
-  }
+        std::shared_ptr<Relay> relay=std::make_shared<Relay>();
+        relay->relay_Threads();
+      }
   else{
     std::cout<<"Invalid Routing String"<<std::endl;
-    return 0;
   }
 }
 }
-Manager::~Manager(){
-    std::cout<<"Destructor Invoked"<<std::endl;
-}
 
-void Manager::start_threads(){
-  threadpool_->insert_task(relay->receive_msg());
 
+void Manager::clientThread(){
+ 
 }

@@ -1,21 +1,18 @@
 #pragma once
 #ifndef RELAY_H
 #define RELAY_H
-#include "socket.h"
-#include<memory>
-#include<functional>
+#include "comm_base.h"
 
-class Relay{
-   
-    public:
+class Relay {
+public:
     Relay();
-    ~ Relay();
-    std::function<std::string(int)> receive_msg();
-    private:
-    int port_{RELAY_PORT};
-    int pos_{RELAY_POS};
-    std::unique_ptr<communication> sock_obj_;
-    std::function<std::string(int)> recv_msg_;
+    ~Relay();
+    void start();
+    
+private:
+    std::unique_ptr<CommunicationManager> comm_manager_;
+    void handle_ss_message(const std::string& message);
+    void handle_client_message(const std::string& message);
 };
 
 #endif

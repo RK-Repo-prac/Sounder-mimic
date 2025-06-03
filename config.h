@@ -1,9 +1,11 @@
 
-#define RELAY_PORT 8888
+#define RELAY_SS_PORT 8888
+#define RELAY_CLIENT_PORT 8887
 #define MANAGER_PORT 7777
+#define SENSING_SERVER_PORT 9999
+#define SS_IP_ADDR "192.168.50.1"
 #define ROUTING "routing=bot1,bot2,bot3"
 #define LOOPBACK_ADDR "127.0.0.1"
-#define MANAGER_POS 0
-#define RELAY_POS 1
-#define CLIENT_POS 2
 #define BUFFER_SIZE 2048
+#define CLIENT_RELAY_PORT 8081
+#define CLIENT_FUSION_PORT 8082

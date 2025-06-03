@@ -1,21 +1,29 @@
 #include "relay.h"
 
+Relay::Relay() {
+    comm_manager_ = std::make_unique<CommunicationManager>();
+    ConnectionConfig ss_config = {
+        .local_port = RELAY_SS_PORT,
+        .local_key = "relay_ss",
+        .remote_ip = SS_IP_ADDR,
+        .remote_port = SENSING_SERVER_PORT,
+        .remote_key = "ss"
+    };
+    comm_manager_->add_connection("ss", ss_config);
+    ConnectionConfig client_config = {
+        .local_port = RELAY_CLIENT_PORT,
+        .local_key = "relay_client", 
+        .remote_ip = "127.0.0.1",
+        .remote_port = CLIENT_RELAY_PORT,
+        .remote_key = "client"
+    };
+    comm_manager_->add_connection("client", client_config);
 
+}
 
-Relay::Relay()
-{
-   sock_obj_=std::make_unique<communication>();
+void Relay::start() {
+    comm_manager_->start_all_threads();
 }
 
 
-
-
-std::function<std::string(int)> Relay::receive_msg(){
-sock_obj_->create_socket(port_,pos_);
-   recv_msg_= [this](int pos){
-         return this->sock_obj_->recv_msg(this->pos_);
-   };
-   return recv_msg_;
-}
-
-Relay::~Relay(){}
+Relay::~Relay() = default;

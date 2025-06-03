@@ -9,25 +9,28 @@
 #include <iostream>
 #include <string>
 #include "config.h"
-
-
+#include <map>
+#include <mutex>
+#include<queue>
+#include<condition_variable>
 
 class communication{
    public:
-
    communication();
    ~ communication();
-   int create_socket(int,int);
-   void send_msg(std::string,int);
-   std::string recv_msg(int);
+   void create_socket(int,std::string);
+   void send_msg(std::string,std::string,const struct sockaddr_in);
+   void recv_msg(std::string,std::queue<std::string> &,std::mutex &,std::condition_variable&);
+   const struct sockaddr_in& return_ss_addr()const {return ss_;}
+   struct sockaddr_in get_map_addr(const std::string);
 
    private:
-   std::vector<int> socket_fd;
-   struct sockaddr_in socket_addr_;
+   std::map<std::string,std::pair<int,sockaddr_in>> socket_fd_;
    short	sin_family;
    int address_family_;
    int socket_type_;
    int protocol_;
+   struct sockaddr_in ss_;
    WSADATA wsaData;
 
 };

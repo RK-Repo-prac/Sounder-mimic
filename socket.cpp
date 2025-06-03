@@ -6,22 +6,23 @@ communication::communication(){
         std::cerr << "WSAStartup failed with error: " << wsaResult << std::endl;
         exit(EXIT_FAILURE);
     }
-    address_family_=AF_UNIX;
+    address_family_=AF_INET;
     socket_type_=SOCK_DGRAM;
     protocol_=IPPROTO_UDP;
-    memset(&socket_addr_,0,sizeof(sockaddr_in));
+    ss_.sin_port=htons(SENSING_SERVER_PORT);
+    ss_.sin_family=address_family_;
+    ss_.sin_addr.s_addr=inet_addr(SS_IP_ADDR);
 }
 
-int communication::create_socket(int port,int pos){
+void communication::create_socket(int port,std::string key){
     int sock_d=socket(address_family_,socket_type_,protocol_);
     if (sock_d == INVALID_SOCKET) {
         std::cerr << "Socket initialization failed with error: " << WSAGetLastError() << std::endl;
         WSACleanup();
         exit(EXIT_FAILURE);
     }
-    else{
-    socket_fd.insert(socket_fd.begin()+pos,sock_d);
-    }
+    struct sockaddr_in socket_addr_;
+    memset(&socket_addr_,0,sizeof(sockaddr_in));
     socket_addr_.sin_port=htons(port);
     socket_addr_.sin_family=AF_UNIX;
     socket_addr_.sin_addr.s_addr=inet_addr("127.0.0.1");
@@ -32,30 +33,45 @@ int communication::create_socket(int port,int pos){
         WSACleanup();
         exit(EXIT_FAILURE);
     }
+    socket_fd_[key]=std::make_pair(sock_d,socket_addr_);
+
 }
 
-void communication::send_msg(std::string msg,int pos){
-    const char* send_msg=msg.c_str();
-    send(socket_fd.at(pos), send_msg, strlen(send_msg), 0);
-}
+void communication::send_msg(std::string msg,std::string key ,const struct sockaddr_in addr)
+{
+    const char* Message=msg.c_str();
+    int result=sendto(socket_fd_[key].first,Message,strlen(Message),0,(sockaddr*)&addr,sizeof(addr));
+    if(result<0)
+    {
+       std::cerr<<"Unable to send message on socket" <<key;
+    }
+}  
 
-std::string communication::recv_msg(int pos){
+void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::mutex &lock,std::condition_variable& cv){
   char buffer[BUFFER_SIZE];
   int bytes_read=0;
   while(1){
-  bytes_read = recv(socket_fd.at(pos), buffer, BUFFER_SIZE - 1, 0);
+  int sockfd=socket_fd_[key].first;
+  struct sockaddr_in addr=socket_fd_[key].second;
+  int len=sizeof(addr);
+  bytes_read = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,(sockaddr*)&addr,&len);
   if (bytes_read > 0) {
+        std::unique_lock<std::mutex> recvlock(lock);
         buffer[bytes_read] = '\0';  
         std::string recv_msg(buffer);
-        std::cout<<"The Message Received is: "<< recv_msg;
-        return recv_msg;
+        std::cout<<"The Message Received on "<<key<<"is: "<< recv_msg;
+        msg.push(recv_msg);
+        recvlock.unlock();
+        cv.notify_one();
     }
     else if(bytes_read == 0){
       continue;
     }
     else{
-        std::cerr << "Reading Message from the socket :"<<pos<< "failed due the error: " << WSAGetLastError() << std::endl;
-        closesocket(socket_fd.at(pos));
+        std::cerr << "Reading Message from the socket :"<<key<< "failed due the error: " << WSAGetLastError() << std::endl;
+        closesocket(sockfd);
+        if (socket_fd_.find(key) != socket_fd_.end()) {
+                socket_fd_.erase(key);}
         WSACleanup();
         exit(EXIT_FAILURE);
 
@@ -64,4 +80,16 @@ std::string communication::recv_msg(int pos){
   }
 }
 
-communication::~communication(){}
+ struct sockaddr_in communication::get_map_addr(const std::string key){
+
+    return socket_fd_[key].second;
+
+
+ };
+
+communication::~communication(){
+    for(auto& pair : socket_fd_) {
+        closesocket(pair.second.first);
+    }
+    WSACleanup();
+}
