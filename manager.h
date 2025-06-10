@@ -12,21 +12,33 @@
 #include<memory>
 #include "relay.h"
 #include "socket.h"
+#include "client.h"
+#include "daemon.h"
+#include "threadManager.h"
+#include "fusion.h"
+#include "util.h"
+#include <chrono>
+
 class Manager{
     public:
-    Manager(std::string routing);
+    Manager(std::string routing,int);
   ~ Manager();
     void start_threads();
-    bool read_config();
     void relayThread();
     void clientThread();
+    void FusionThread();
+    void DaemonThread();
+    bool Exit_Status();
     private:
      int thread_count_;
      std::string routing_;
      std::thread manager_thread_;
-     std::shared_ptr<Relay> relay;
-     std::shared_ptr<communication> sock_obj_;
-    
+     bool routing_success_={false};
+     std::mutex routinglock_;
+     std::mutex exitmutex;
+     std::condition_variable routing_cv_;
+     std::unique_ptr<ThreadManager> thread_manager_;
+     bool exit_status{false};
 
 };
 

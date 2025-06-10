@@ -1,49 +1,42 @@
 #include "client.h"
 
+Client::Client(){
 
+   comm_manager_=std::make_unique<CommunicationManager>();
+   ConnectionConfig relay_config={
+      .local_port=CLIENT_RELAY_PORT,
+      .local_key="client_relay",
+      .remote_ip="127.0.0.1",
+      .remote_port=RELAY_CLIENT_PORT,
+      .remote_key = "relay",
+   };
 
-Client::Client()
-{
-client_sock_=std::make_shared<communication>();
-client_sock_->create_socket(CLIENT_FUSION_PORT,"client_fusion");
-client_sock_->create_socket(CLIENT_RELAY_PORT,"client_relay");
+   ConnectionConfig fusion_config = {
+        .local_port = CLIENT_FUSION_PORT,
+        .local_key = "client_fusion",
+        .remote_ip = "127.0.0.1",
+        .remote_port = FUSION_CLIENT_PORT,
+        .remote_key = "fusion"
+    };
+
+    comm_manager_->add_connection(relay_config.remote_key,relay_config);
+    comm_manager_->add_connection(fusion_config.remote_key,fusion_config);
+    
+  ConnectionConfig daemon_coonfig={
+    .local_port=CLIENT_DAEMON_PORT,
+    .local_key="client-daemon",
+    .remote_ip="127.0.0.1",
+    .remote_port=DAEMON_CLIENT_PORT,
+    .remote_key="daemon"
+  };
+   
+  comm_manager_->add_connection(daemon_coonfig.remote_key,daemon_coonfig);
+}
+
+void Client::start(){
+   LOG("Starting Client Threads");
+   comm_manager_->start_all_threads();
 }
 
 
-void Client::client_Threads()
-{
-   recv_thread_Fusion_=std::thread(recv_msg,"client_fusion",Fusion_msgs_,Fusion_msg_mutex_,Fusion_cv_);
-   recv_thread_Relay_=std::thread(recv_msg,"client_relay",Relay_msgs_,Relay_msg_mutex_,Relay_cv_);
-   send_thread_Relay_ = std::thread(&Client::send_mgs_to_Relay, this);
-}
-
-
-
-void Client::send_mgs_to_Relay(){
-   while(1){
-      std::unique_lock<std::mutex>lock(Fusion_msg_mutex_);
-      Fusion_cv_.wait(lock,[this](){
-           return !Fusion_msgs_.empty();
-
-      });
-         std::string msg=Fusion_msgs_.front();
-         Fusion_msgs_.pop();
-         lock.unlock();
-         client_sock_->send_msg(msg,"relay_client",client_sock_->return_ss_addr());
-   }
-}
-
-
-Client::~Client()
-{
-  if(recv_thread_Fusion_.joinable()){
-   recv_thread_Fusion_.join();
-  }
-
-  if (recv_thread_Relay_.joinable()) {
-        recv_thread_Relay_.join();
-    }
-  if (send_thread_Relay_.joinable()) {
-        send_thread_Relay_.join();
-    }
-}
+Client::~Client()= default;

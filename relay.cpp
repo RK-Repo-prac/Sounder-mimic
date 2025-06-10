@@ -21,7 +21,9 @@ Relay::Relay() {
 
 }
 
+
 void Relay::start() {
+    LOG("Starting Relay Threads");
     comm_manager_->start_all_threads();
 }
 

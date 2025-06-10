@@ -1,7 +1,7 @@
 #include "comm_base.h"
 
 CommunicationManager::CommunicationManager() : running_(false) {
-    socket_ = std::make_shared<communication>();
+    socket_ = std::make_unique<communication>();
 }
 
 CommunicationManager::~CommunicationManager() {
@@ -45,21 +45,47 @@ void CommunicationManager::start_all_threads() {
 
 
 void CommunicationManager::recv_thread_func(const std::string& connection_name) {
+    LOG("Started listening on socket "<<connection_name);
     auto it = connections_.find(connection_name);
     if (it == connections_.end()) return;
     
     Connection& conn = *it->second;
     socket_->recv_msg(conn.config.local_key, conn.incoming_msgs, 
                      conn.incoming_mutex, conn.incoming_cv);
+
+    std::string message_to_forward;
+    
+     while(1){
+        {
+            std::unique_lock<std::mutex> inlock(conn.incoming_mutex);
+            conn.incoming_cv.wait(inlock, [&conn](){
+                return !conn.incoming_msgs.empty();
+            });
+            
+            if (!conn.incoming_msgs.empty()) {
+                message_to_forward = conn.incoming_msgs.front();  // Simple string copy
+                conn.incoming_msgs.pop();
+            }
+        } 
+        
+        if (!message_to_forward.empty()) {
+            {
+                std::lock_guard<std::mutex> outlock(conn.outgoing_mutex);
+                conn.outgoing_msgs.push(message_to_forward);
+                conn.outgoing_cv.notify_one();
+            }
+        }
+     }
 }
 
 void CommunicationManager::send_thread_func(const std::string& connection_name) {
+    LOG("Sending Message to: "<<connection_name);
     auto it = connections_.find(connection_name);
     if (it == connections_.end()) return;
     
     Connection& conn = *it->second;
-    
-    while (running_) {
+    while (1) {
+        LOG("Running the send thread"<<it->first);
         std::unique_lock<std::mutex> lock(conn.outgoing_mutex);
         conn.outgoing_cv.wait(lock, [&conn]() {
             return !conn.outgoing_msgs.empty();
@@ -69,7 +95,21 @@ void CommunicationManager::send_thread_func(const std::string& connection_name) 
             std::string msg = conn.outgoing_msgs.front();
             conn.outgoing_msgs.pop();
             lock.unlock();
+            LOG("Sending Message");
             socket_->send_msg(msg, conn.config.local_key, conn.remote_addr);
         }
     }
+}
+
+
+void CommunicationManager::insert_data(std::string msg,std::string &key){
+Connection* conn = nullptr;
+auto it = connections_.find(key);
+if (it != connections_.end()) {
+    conn = it->second.get();}
+   {
+    std::unique_lock<std::mutex> ll(conn->incoming_mutex);
+    conn->incoming_msgs.push(msg);
+
+   }
 }

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef DAEMON_H
+#define DAEMON_H
 #include "socket.h"
 #include<memory>
 #include<functional>
@@ -9,13 +9,14 @@
 #include<condition_variable>
 #include "comm_base.h"
 #include "util.h"
-
-class Client{
+#include <chrono>
+class Daemon{
     
     public:
-    Client();
-    ~Client();
+    Daemon();
+    ~Daemon();
    void start();
+   void mimic_message();
     
     private:
      std::unique_ptr<CommunicationManager> comm_manager_;

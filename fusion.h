@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef FUSION_H
+#define FUSION_H
 #include "socket.h"
 #include<memory>
 #include<functional>
@@ -10,11 +10,11 @@
 #include "comm_base.h"
 #include "util.h"
 
-class Client{
+class Fusion{
     
     public:
-    Client();
-    ~Client();
+    Fusion();
+    ~Fusion();
    void start();
     
     private:

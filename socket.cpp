@@ -1,4 +1,5 @@
 #include "socket.h"
+#include "util.h"
 
 communication::communication(){
     int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -24,15 +25,16 @@ void communication::create_socket(int port,std::string key){
     struct sockaddr_in socket_addr_;
     memset(&socket_addr_,0,sizeof(sockaddr_in));
     socket_addr_.sin_port=htons(port);
-    socket_addr_.sin_family=AF_UNIX;
+    socket_addr_.sin_family=AF_INET;
     socket_addr_.sin_addr.s_addr=inet_addr("127.0.0.1");
     int bind_result=bind(sock_d,(sockaddr*)&socket_addr_,sizeof(socket_addr_));
     if (bind_result == SOCKET_ERROR) {
-        std::cerr << "Unable to bind the port number to socket with error: " << WSAGetLastError() << std::endl;
+        std::cerr << "Unable to bind the port number "<<port<< "to socket with error: " << WSAGetLastError() << std::endl;
         closesocket(sock_d);
         WSACleanup();
         exit(EXIT_FAILURE);
     }
+    LOG("Successfully creates socket for "<<key<<" on port: "<<port);
     socket_fd_[key]=std::make_pair(sock_d,socket_addr_);
 
 }
@@ -40,6 +42,7 @@ void communication::create_socket(int port,std::string key){
 void communication::send_msg(std::string msg,std::string key ,const struct sockaddr_in addr)
 {
     const char* Message=msg.c_str();
+    LOG("Sending Message to "<<key<<" on port: "<<addr.sin_port);
     int result=sendto(socket_fd_[key].first,Message,strlen(Message),0,(sockaddr*)&addr,sizeof(addr));
     if(result<0)
     {
@@ -54,12 +57,13 @@ void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::m
   int sockfd=socket_fd_[key].first;
   struct sockaddr_in addr=socket_fd_[key].second;
   int len=sizeof(addr);
+  LOG("Polling on the socket"<<sockfd);
   bytes_read = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,(sockaddr*)&addr,&len);
   if (bytes_read > 0) {
         std::unique_lock<std::mutex> recvlock(lock);
         buffer[bytes_read] = '\0';  
         std::string recv_msg(buffer);
-        std::cout<<"The Message Received on "<<key<<"is: "<< recv_msg;
+        LOG("The Message Received on "<<key<<"is: "<< recv_msg);
         msg.push(recv_msg);
         recvlock.unlock();
         cv.notify_one();

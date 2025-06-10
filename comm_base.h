@@ -9,6 +9,8 @@
 #include <condition_variable>
 #include <functional>
 #include <map>
+#include "util.h"
+
 
 struct ConnectionConfig {
     int local_port;
@@ -23,7 +25,8 @@ public:
     CommunicationManager();
     ~CommunicationManager();
     void add_connection(const std::string& name, const ConnectionConfig& config);   
-    void start_all_threads();    
+    void start_all_threads();
+    void insert_data(std::string,std::string &);    
 
 private:
     struct Connection {
@@ -39,7 +42,7 @@ private:
         struct sockaddr_in remote_addr;
     };
     
-    std::shared_ptr<communication> socket_;
+    std::unique_ptr<communication> socket_;
     std::map<std::string, std::unique_ptr<Connection>> connections_;
     bool running_;    
     void recv_thread_func(const std::string& connection_name);
