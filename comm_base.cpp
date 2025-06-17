@@ -56,9 +56,13 @@ void CommunicationManager::recv_thread_func(const std::string& connection_name) 
     std::string message_to_forward;
     
      while(1){
-        {
+        {   LOG("Before Acquiring the Lock");
             std::unique_lock<std::mutex> inlock(conn.incoming_mutex);
-            conn.incoming_cv.wait(inlock, [&conn](){
+            LOG("After Acquiring the Lock");
+            if(it->first=="fusion"){
+            LOG("The Size of the incomming queue is: "<<it->second->incoming_msgs.size());
+        }
+            conn.incoming_cv.wait_for(inlock, std::chrono::seconds(1), [&conn](){
                 return !conn.incoming_msgs.empty();
             });
             
@@ -85,9 +89,8 @@ void CommunicationManager::send_thread_func(const std::string& connection_name) 
     
     Connection& conn = *it->second;
     while (1) {
-        LOG("Running the send thread"<<it->first);
         std::unique_lock<std::mutex> lock(conn.outgoing_mutex);
-        conn.outgoing_cv.wait(lock, [&conn]() {
+        conn.outgoing_cv.wait_for(lock, std::chrono::seconds(1), [&conn]() {
             return !conn.outgoing_msgs.empty();
         });
         
@@ -112,4 +115,7 @@ if (it != connections_.end()) {
     conn->incoming_msgs.push(msg);
 
    }
+
+ conn->incoming_cv.notify_one();  
+   
 }

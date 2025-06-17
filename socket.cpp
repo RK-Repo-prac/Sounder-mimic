@@ -53,31 +53,36 @@ void communication::send_msg(std::string msg,std::string key ,const struct socka
 void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::mutex &lock,std::condition_variable& cv){
   char buffer[BUFFER_SIZE];
   int bytes_read=0;
-  while(1){
   int sockfd=socket_fd_[key].first;
   struct sockaddr_in addr=socket_fd_[key].second;
   int len=sizeof(addr);
-  LOG("Polling on the socket"<<sockfd);
+  u_long mode = 1;
+    if (ioctlsocket(sockfd, FIONBIO, &mode) != 0) {
+        LOG("Failed to set socket to non-blocking mode: " << WSAGetLastError());
+        return;
+    }
+  while(1){
   bytes_read = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,(sockaddr*)&addr,&len);
   if (bytes_read > 0) {
-        std::unique_lock<std::mutex> recvlock(lock);
+        {std::unique_lock<std::mutex> recvlock(lock);
         buffer[bytes_read] = '\0';  
         std::string recv_msg(buffer);
         LOG("The Message Received on "<<key<<"is: "<< recv_msg);
         msg.push(recv_msg);
-        recvlock.unlock();
+        recvlock.unlock();}
         cv.notify_one();
     }
     else if(bytes_read == 0){
       continue;
     }
     else{
-        std::cerr << "Reading Message from the socket :"<<key<< "failed due the error: " << WSAGetLastError() << std::endl;
-        closesocket(sockfd);
-        if (socket_fd_.find(key) != socket_fd_.end()) {
-                socket_fd_.erase(key);}
-        WSACleanup();
-        exit(EXIT_FAILURE);
+        int error = WSAGetLastError();
+            if (error == WSAEWOULDBLOCK) {
+                continue;
+            } else {
+                LOG("Socket error on " << key << ": " << error);
+                break;
+            }
 
     }
 
