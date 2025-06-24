@@ -39,18 +39,18 @@ void communication::create_socket(int port,std::string key){
 
 }
 
-void communication::send_msg(std::string msg,std::string key ,const struct sockaddr_in addr)
+void communication::send_msg(std::string msg,std::string key ,const struct sockaddr_in addr,const std::string &name)
 {
     const char* Message=msg.c_str();
-    LOG("Sending Message to "<<key<<" on port: "<<addr.sin_port);
+    LOG("Sending Message to "<<name<<" on port: "<<addr.sin_port);
     int result=sendto(socket_fd_[key].first,Message,strlen(Message),0,(sockaddr*)&addr,sizeof(addr));
     if(result<0)
     {
-       std::cerr<<"Unable to send message on socket" <<key;
+       std::cerr<<"Unable to send message to "<<name;
     }
 }  
 
-void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::mutex &lock,std::condition_variable& cv){
+void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::mutex &lock,std::condition_variable& cv,std::function<void()> recievecallback){
   char buffer[BUFFER_SIZE];
   int bytes_read=0;
   int sockfd=socket_fd_[key].first;
@@ -71,6 +71,9 @@ void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::m
         msg.push(recv_msg);
         recvlock.unlock();}
         cv.notify_one();
+        if (recievecallback) {
+                recievecallback();
+            }
     }
     else if(bytes_read == 0){
       continue;

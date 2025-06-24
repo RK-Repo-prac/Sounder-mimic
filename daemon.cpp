@@ -32,11 +32,14 @@ void Daemon::start(){
 
 void Daemon::mimic_message(){
    std::string key="fusion";
-   while(1){
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      LOG("csi recieved on Bots");
-      comm_manager_->insert_data("csi recieved on Bots",key);
-   }
+   // while(1){
+   //    std::this_thread::sleep_for(std::chrono::seconds(1));
+   //    LOG("csi recieved on Bots");
+   //    comm_manager_->insert_data("csi recieved on Bots",key);
+   // }
+   std::this_thread::sleep_for(std::chrono::seconds(1));
+   LOG("csi recieved on Bots");
+   comm_manager_->insert_data("csi recieved on Bots",key);
    
 }
 

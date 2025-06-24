@@ -14,14 +14,15 @@
 #include<queue>
 #include<condition_variable>
 #include<chrono>
+#include<functional>
 
 class communication{
    public:
    communication();
    ~ communication();
    void create_socket(int,std::string);
-   void send_msg(std::string,std::string,const struct sockaddr_in);
-   void recv_msg(std::string,std::queue<std::string> &,std::mutex &,std::condition_variable&);
+   void send_msg(std::string,std::string,const struct sockaddr_in,const std::string &);
+   void recv_msg(std::string,std::queue<std::string> &,std::mutex &,std::condition_variable&,std::function<void()> recievecallback = nullptr);
    const struct sockaddr_in& return_ss_addr()const {return ss_;}
    struct sockaddr_in get_map_addr(const std::string);
 

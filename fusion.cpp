@@ -7,16 +7,16 @@ Fusion::Fusion(){
       .local_port=FUSION_DAEMON_PORT,
       .local_key="fusion_daemon",
       .remote_ip="127.0.0.1",
-      .remote_port=DAEMON_FUSION_PORT,
-      .remote_key = "daemon",
+      .remote_port=CLIENT_FUSION_PORT,
+      .remote_key = "client",
    };
 
    ConnectionConfig client_config = {
         .local_port = FUSION_CLIENT_PORT,
         .local_key = "fusion_client",
         .remote_ip = "127.0.0.1",
-        .remote_port = CLIENT_FUSION_PORT,
-        .remote_key = "client"
+        .remote_port = DAEMON_FUSION_PORT,
+        .remote_key = "daemon"
     };
 
     comm_manager_->add_connection(client_config.remote_key,client_config);

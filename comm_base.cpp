@@ -1,5 +1,4 @@
 #include "comm_base.h"
-
 CommunicationManager::CommunicationManager() : running_(false) {
     socket_ = std::make_unique<communication>();
 }
@@ -50,40 +49,17 @@ void CommunicationManager::recv_thread_func(const std::string& connection_name) 
     if (it == connections_.end()) return;
     
     Connection& conn = *it->second;
-    socket_->recv_msg(conn.config.local_key, conn.incoming_msgs, 
-                     conn.incoming_mutex, conn.incoming_cv);
+    auto recievecallback=[this,&conn](){
 
-    std::string message_to_forward;
+        this->readincoming(conn);
+    };
+
+   socket_->recv_msg(conn.config.local_key, conn.incoming_msgs, 
+                     conn.incoming_mutex, conn.incoming_cv,recievecallback);
     
-     while(1){
-        {   LOG("Before Acquiring the Lock");
-            std::unique_lock<std::mutex> inlock(conn.incoming_mutex);
-            LOG("After Acquiring the Lock");
-            if(it->first=="fusion"){
-            LOG("The Size of the incomming queue is: "<<it->second->incoming_msgs.size());
-        }
-            conn.incoming_cv.wait_for(inlock, std::chrono::seconds(1), [&conn](){
-                return !conn.incoming_msgs.empty();
-            });
-            
-            if (!conn.incoming_msgs.empty()) {
-                message_to_forward = conn.incoming_msgs.front();  // Simple string copy
-                conn.incoming_msgs.pop();
-            }
-        } 
-        
-        if (!message_to_forward.empty()) {
-            {
-                std::lock_guard<std::mutex> outlock(conn.outgoing_mutex);
-                conn.outgoing_msgs.push(message_to_forward);
-                conn.outgoing_cv.notify_one();
-            }
-        }
-     }
 }
 
 void CommunicationManager::send_thread_func(const std::string& connection_name) {
-    LOG("Sending Message to: "<<connection_name);
     auto it = connections_.find(connection_name);
     if (it == connections_.end()) return;
     
@@ -98,8 +74,7 @@ void CommunicationManager::send_thread_func(const std::string& connection_name) 
             std::string msg = conn.outgoing_msgs.front();
             conn.outgoing_msgs.pop();
             lock.unlock();
-            LOG("Sending Message");
-            socket_->send_msg(msg, conn.config.local_key, conn.remote_addr);
+            socket_->send_msg(msg, conn.config.local_key, conn.remote_addr,connection_name);
         }
     }
 }
@@ -107,15 +82,41 @@ void CommunicationManager::send_thread_func(const std::string& connection_name) 
 
 void CommunicationManager::insert_data(std::string msg,std::string &key){
 Connection* conn = nullptr;
-auto it = connections_.find(key);
-if (it != connections_.end()) {
-    conn = it->second.get();}
-   {
-    std::unique_lock<std::mutex> ll(conn->incoming_mutex);
-    conn->incoming_msgs.push(msg);
-
-   }
-
- conn->incoming_cv.notify_one();  
+ auto it = connections_.find(key);
+ 
+    if (it != connections_.end()) {
+        Connection& conn = *it->second;
+        LOG("Inserting Data to fusion socket port: "<< conn.remote_addr.sin_port);
+        {
+            std::lock_guard<std::mutex> outlock(conn.outgoing_mutex);
+            conn.outgoing_msgs.push(msg);
+        }
+        
+        conn.outgoing_cv.notify_one();
+    }
    
+}
+
+
+
+void CommunicationManager::readincoming(Connection &conn){
+     std::string message_to_forward;
+
+ {   
+            std::lock_guard<std::mutex> inlock(conn.incoming_mutex);
+            if (!conn.incoming_msgs.empty()) {
+                message_to_forward = conn.incoming_msgs.front(); 
+                conn.incoming_msgs.pop();
+            }
+        } 
+        
+        if (!message_to_forward.empty()) {
+            {
+                std::lock_guard<std::mutex> outlock(conn.outgoing_mutex);
+                conn.outgoing_msgs.push(message_to_forward);
+                conn.outgoing_cv.notify_one();
+            }
+        }
+
+
 }

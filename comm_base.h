@@ -11,7 +11,6 @@
 #include <map>
 #include "util.h"
 
-
 struct ConnectionConfig {
     int local_port;
     std::string local_key;
@@ -41,13 +40,13 @@ private:
         std::thread send_thread;
         struct sockaddr_in remote_addr;
     };
-    
     std::unique_ptr<communication> socket_;
     std::map<std::string, std::unique_ptr<Connection>> connections_;
     bool running_;    
     void recv_thread_func(const std::string& connection_name);
     void send_thread_func(const std::string& connection_name);
     void setup_remote_address(Connection& conn);
+    void readincoming(Connection &conn);
 };
 
 #endif

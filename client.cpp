@@ -7,16 +7,16 @@ Client::Client(){
       .local_port=CLIENT_RELAY_PORT,
       .local_key="client_relay",
       .remote_ip="127.0.0.1",
-      .remote_port=RELAY_CLIENT_PORT,
-      .remote_key = "relay",
+      .remote_port=FUSION_CLIENT_PORT,
+      .remote_key = "fusion",
    };
 
    ConnectionConfig fusion_config = {
         .local_port = CLIENT_FUSION_PORT,
         .local_key = "client_fusion",
         .remote_ip = "127.0.0.1",
-        .remote_port = FUSION_CLIENT_PORT,
-        .remote_key = "fusion"
+        .remote_port = RELAY_CLIENT_PORT,
+        .remote_key = "relay"
     };
 
     comm_manager_->add_connection(relay_config.remote_key,relay_config);

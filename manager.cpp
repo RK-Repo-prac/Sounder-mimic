@@ -89,8 +89,8 @@ void Manager::DaemonThread(){
   { std::unique_lock<std::mutex> lock(routinglock_);
     routing_cv_.wait(lock,[this](){return routing_success_;});
     daemon->start();
-    LOG("Waiting for 30 seconds before starting sounding");
-    std::this_thread::sleep_for(std::chrono::seconds(30));
+    LOG("Waiting for 10 seconds before starting sounding");
+    std::this_thread::sleep_for(std::chrono::seconds(10));
     LOG("Finished Waiting");
     lock.unlock();
   }
