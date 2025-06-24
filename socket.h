@@ -2,8 +2,13 @@
 
 #ifndef SOCKET_H
 #define SOCKET_H
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <cstring>
 #include <vector>
 #include <stdio.h>
 #include <iostream>
@@ -33,9 +38,7 @@ class communication{
    int socket_type_;
    int protocol_;
    struct sockaddr_in ss_;
-   WSADATA wsaData;
 
 };
-
 
 #endif
