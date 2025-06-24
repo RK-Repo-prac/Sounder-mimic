@@ -2,11 +2,6 @@
 #include "util.h"
 
 communication::communication(){
-    int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (wsaResult != 0) {
-        std::cerr << "WSAStartup failed with error: " << wsaResult << std::endl;
-        exit(EXIT_FAILURE);
-    }
     address_family_=AF_INET;
     socket_type_=SOCK_DGRAM;
     protocol_=IPPROTO_UDP;
@@ -17,9 +12,8 @@ communication::communication(){
 
 void communication::create_socket(int port,std::string key){
     int sock_d=socket(address_family_,socket_type_,protocol_);
-    if (sock_d == INVALID_SOCKET) {
-        std::cerr << "Socket initialization failed with error: " << WSAGetLastError() << std::endl;
-        WSACleanup();
+    if (sock_d < 0) {
+        std::cerr << "Socket initialization failed with error: " << strerror(errno) << std::endl;
         exit(EXIT_FAILURE);
     }
     struct sockaddr_in socket_addr_;
@@ -28,15 +22,13 @@ void communication::create_socket(int port,std::string key){
     socket_addr_.sin_family=AF_INET;
     socket_addr_.sin_addr.s_addr=inet_addr("127.0.0.1");
     int bind_result=bind(sock_d,(sockaddr*)&socket_addr_,sizeof(socket_addr_));
-    if (bind_result == SOCKET_ERROR) {
-        std::cerr << "Unable to bind the port number "<<port<< "to socket with error: " << WSAGetLastError() << std::endl;
-        closesocket(sock_d);
-        WSACleanup();
+    if (bind_result < 0) {
+        std::cerr << "Unable to bind the port number "<<port<< "to socket with error: " << strerror(errno) << std::endl;
+        close(sock_d);
         exit(EXIT_FAILURE);
     }
     LOG("Successfully creates socket for "<<key<<" on port: "<<port);
     socket_fd_[key]=std::make_pair(sock_d,socket_addr_);
-
 }
 
 void communication::send_msg(std::string msg,std::string key ,const struct sockaddr_in addr,const std::string &name)
@@ -55,12 +47,19 @@ void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::m
   int bytes_read=0;
   int sockfd=socket_fd_[key].first;
   struct sockaddr_in addr=socket_fd_[key].second;
-  int len=sizeof(addr);
-  u_long mode = 1;
-    if (ioctlsocket(sockfd, FIONBIO, &mode) != 0) {
-        LOG("Failed to set socket to non-blocking mode: " << WSAGetLastError());
-        return;
-    }
+  socklen_t len=sizeof(addr);
+  
+  // Set socket to non-blocking mode
+  int flags = fcntl(sockfd, F_GETFL, 0);
+  if (flags == -1) {
+      LOG("Failed to get socket flags: " << strerror(errno));
+      return;
+  }
+  if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+      LOG("Failed to set socket to non-blocking mode: " << strerror(errno));
+      return;
+  }
+  
   while(1){
   bytes_read = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,(sockaddr*)&addr,&len);
   if (bytes_read > 0) {
@@ -79,29 +78,22 @@ void communication::recv_msg(std::string key,std::queue<std::string> &msg,std::m
       continue;
     }
     else{
-        int error = WSAGetLastError();
-            if (error == WSAEWOULDBLOCK) {
-                continue;
-            } else {
-                LOG("Socket error on " << key << ": " << error);
-                break;
-            }
-
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            continue;
+        } else {
+            LOG("Socket error on " << key << ": " << strerror(errno));
+            break;
+        }
     }
-
   }
 }
 
  struct sockaddr_in communication::get_map_addr(const std::string key){
-
     return socket_fd_[key].second;
-
-
  };
 
 communication::~communication(){
     for(auto& pair : socket_fd_) {
-        closesocket(pair.second.first);
+        close(pair.second.first);
     }
-    WSACleanup();
 }
